@@ -1,0 +1,245 @@
+"""
+TafeseSirnaA4Q2
+COMP 1012 SECTION AO2
+INSTRUCTOR Dr.Chowdhury
+ASSIGNMENT: A4 Question 2
+AUTHOR Sirna Tafese
+VERSION 2024/12/11
+PURPOSE: Reads in many data points from files and provides user insight on
+various lakes and portage routes.
+"""
+
+class Lake:
+    """
+    A class representing a lake.
+
+    return: None
+    """
+    def __init__(self, name, waterQuality):
+        """
+        Initializes the lake with a name, water quality, and an empty list of portages.
+
+        return: None
+        parameter: name (str) - the name of the lake
+        parameter: waterQuality (str) - the water quality of the lake
+        """
+        self.name = name
+        self.waterQuality = waterQuality
+        self.portages = []
+
+    def __str__(self):
+        """
+        Returns a string representation of the lake with its name, water quality, and connections.
+
+        return: (str) - a string representing the lake
+        """
+        connectionsList = [portage.getOtherLake(self.name) for portage in self.portages]
+        connections = ', '.join(connectionsList)        
+        return "{} has {} water quality, and is connected to: {}".format(self.name, self.waterQuality, connections)
+
+    def getName(self):
+        """
+        Returns the name of the lake.
+
+        return: (str) - name of the lake
+        """
+        return self.name
+
+    def getWaterQuality(self):
+        """
+        Returns the water quality of the lake.
+
+        return: (str) - water quality of the lake
+        """
+        return self.waterQuality
+
+    def addPortage(self, portage):
+        """
+        Adds a portage to the lake.
+
+        return: None
+        parameter: portage (Portage) - the portage to be added
+        """
+        self.portages.append(portage)
+
+    def getPortages(self):
+        """
+        Returns the list of portages associated with the lake.
+
+        return: (list of Portage objects) - list of portages
+        """
+        return self.portages
+
+
+class Portage:
+    """
+    A class representing a portage route between two lakes.
+
+    return: None
+    """
+    def __init__(self, lake1, lake2, distance):
+        """
+        Initializes the portage with two lakes and a distance.
+
+        return: None
+        parameter: lake1 (Lake) - the first lake
+        parameter: lake2 (Lake) - the second lake
+        parameter: distance (float) - the distance of the portage
+        """
+        self.lake1 = lake1
+        self.lake2 = lake2
+        self.distance = distance
+
+    def __str__(self):
+        """
+        Returns a string representation of the portage between two lakes.
+
+        return: (str) - a string representing the portage
+        """
+        return "{} and {} are connected by a portage of {} km.".format(self.lake1.getName(), self.lake2.getName(), self.distance)
+
+    def getDistance(self):
+        """
+        Returns the distance of the portage.
+
+        return: (float) - the distance of the portage
+        """
+        return self.distance
+
+    def getOtherLake(self, lakeName):
+        """
+        Returns the name of the other lake connected by the portage.
+
+        return: (str) - name of the other lake
+        parameter: lakeName (str) - the name of the first lake
+        """
+        if lakeName == self.lake1.getName():
+            return self.lake2.getName()
+        elif lakeName == self.lake2.getName():
+            return self.lake1.getName()
+        else:
+            return "Error: Lake not found on this portage."
+
+
+def loadLakes(fileName):
+    """
+    Loads lakes from a file and returns a dictionary of lake objects.
+
+    return: (dict) - dictionary with lake names as keys and Lake objects as values
+    parameter: fileName (str) - name of the file to load lakes from
+    """
+    lakes = {}
+    with open(fileName, 'r') as file:
+        for line in file:
+            name, quality = line.strip().split(', ')
+            lakes[name] = Lake(name, quality)
+    return lakes
+
+
+def loadPortages(fileName, lakes):
+    """
+    Loads portages from a file and associates them with the corresponding lakes.
+
+    return: None
+    parameter: fileName (str) - name of the file to load portages from
+    parameter: lakes (dict) - dictionary of Lake objects
+    """
+    with open(fileName, 'r') as file:
+        for line in file:
+            lake1Name, lake2Name, distance = line.strip().split(', ')
+            distance = float(distance)
+            if lake1Name in lakes and lake2Name in lakes:
+                lake1 = lakes[lake1Name]
+                lake2 = lakes[lake2Name]
+                portage = Portage(lake1, lake2, distance)
+                lake1.addPortage(portage)
+                lake2.addPortage(portage)
+            else:
+                print("Error: One or both lakes ({}, {}) not found.".format(lake1Name, lake2Name))
+
+
+def totalPortageDistance(lakes):
+    """
+    Calculates the total distance of all portages in the lakes.
+
+    return: (float) - total portage distance
+    parameter: lakes (dict) - dictionary of Lake objects
+    """
+    distances = set()
+    for lake in lakes.values():
+        for portage in lake.getPortages():
+            distances.add(id(portage))
+    
+    totalDistance = 0
+    for lake in lakes.values():
+        for portage in lake.getPortages():
+            if id(portage) in distances:
+                totalDistance += portage.getDistance()
+    
+    return totalDistance
+
+
+def isPortageBetween(lakes, lake1Name, lake2Name):
+    """
+    Checks if there is a portage between two specified lakes.
+
+    return: (bool) - True if a portage exists between the lakes, False otherwise
+    parameter: lakes (dict) - dictionary of Lake objects
+    parameter: lake1Name (str) - name of the first lake
+    parameter: lake2Name (str) - name of the second lake
+    """
+    if lake1Name in lakes and lake2Name in lakes:
+        lake1 = lakes[lake1Name]
+        for portage in lake1.getPortages():
+            otherLake = portage.getOtherLake(lake1Name)
+            if otherLake == lake2Name:
+                return True
+    return False
+
+
+def askInfo(lakes):
+    """
+    Prompts the user for input and performs operations based on the user's choice.
+
+    return: None
+    parameter: lakes (dict) - dictionary of Lake objects
+    """
+    running = True
+    while running:
+        choice = input("Enter 'q' to quit, 'd' to get total portage distance, 'e' to check portage existence: ").strip().lower()
+        if choice == 'q':
+            print("End of Program ")
+            running = False
+        elif choice == 'd':
+            print("Total portage distance: {:.2f} km".format(totalPortageDistance(lakes)))
+        elif choice == 'e':
+            lake1 = input("Enter the first lake name: ").strip()
+            lake2 = input("Enter the second lake name: ").strip()
+            if isPortageBetween(lakes, lake1, lake2):
+                print("There is a portage between {} and {}.".format(lake1, lake2))
+            else:
+                print("No portage exists between {} and {}.".format(lake1, lake2))
+        else:
+            print("There is no such thing as that")
+
+
+def main():
+    """
+    Main function that loads lake and portage data, then allows the user to query the information.
+
+    return: None
+    """
+    lakeFile = input("Enter the name of the lake file: ").strip()
+    portageFile = input("Enter the name of the portage file: ").strip()
+    lakes = loadLakes(lakeFile)  # Load lakes from the specified file
+    loadPortages(portageFile, lakes)  # Load portages and associate them with lakes
+    print("\nLoaded Lakes:")
+    for lake in lakes.values():
+        print("{}".format(lake))
+    print("\nAsk info:")
+    askInfo(lakes)  # Allow user to ask for information about lakes and portages
+
+
+if __name__ == "__main__":
+    main()  # Run the program
+    print("End of Program")
